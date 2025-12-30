@@ -13,7 +13,69 @@ class Cubie:
         
         self.position = position
         self.faces = faces
+        
+        self.FACE_ROTATIONS = {
+            'x': {
+                'y+': 'z-',
+                'z-': 'y-',
+                'y-': 'z+',
+                'z+': 'y+'
+            },
+            'y': {
+                'x+': 'z+',
+                'z+': 'x-',
+                'x-': 'z-',
+                'z-': 'x+'
+            },
+            'z': {
+                'x+': 'y-',
+                'y-': 'x-',
+                'x-': 'y+',
+                'y+': 'x+'
+            }
+        }
 
+    
+         
+    def transform(self, transformation):
+        axis, layer, direction = transformation
+        x, y, z = self.position
+        #select relevant coord to this transformation
+        coord = {'x' : x, 'y' : y, 'z': z}[axis]
+        
+        #only transform if in layer affected
+        if coord != layer:
+            return
+        
+        #-1 becomes 3 turns 
+        turns = direction % 4
+        
+        for _ in range(turns):
+            self.position = self.rotate_pos(self.position, axis)
+            
+            #remap colours
+            face_map = self.FACE_ROTATIONS[axis]
+            new_faces = {}
+            for face, color in self.faces.items():
+                new_faces[face_map.get(face, face)] = color
+            self.faces = new_faces
+        
+    #apply a vector transformation according to the axis we rotate around
+    def rotate_pos(self, pos, axis):
+         x, y, z = pos
+         
+         if axis == 'x':
+             return (x, z, -y) 
+         if axis == 'y':
+             return (-z, y, x)
+         if axis == 'z':
+             return (y, -x, z)
+    
+    #basic print all attributes of the cubie
+    def __repr__(self):
+        faces_str = ", ".join(f"{k}:{v}" for k, v in sorted(self.faces.items()))
+        return f"Cubie(pos={self.position}, faces={{ {faces_str} }})"
+    
 """
       | y+
       |
@@ -29,7 +91,12 @@ class Cube:
         self.cubies = []
         self.build_solved()
         
-        #for use with Cube.rotate(), easy way to define all possible moves
+        """
+        for use with Cube.rotate(), easy way to define all possible moves
+            axis a char {x, y, z}: axis to rotate around
+            layer an int {-1, 0, 1}: layer to rotate
+            direction an int {1, -1, 2}: regular, prime, double move
+        """
         self.MOVE_MAP = {
             "R":  [('x', 1,  1)],
             "R'": [('x', 1, -1)],
@@ -65,15 +132,15 @@ class Cube:
             "E'": [('y', 0,  1)],
             "E2": [('y', 0,  2)],
             
-            "S":  [('z', 0,  1)],  
-            "S":  [('z', 0, -1)],  
-            "S":  [('z', 0,  2)],  
+            "S":   [('z', 0,  1)],  
+            "S'":  [('z', 0, -1)],  
+            "S2":  [('z', 0,  2)],  
             
             #full rotations are implemented as a composite of other rotations (X == R + M' + L' )
             
-            "X":  [('x', 1,  1), ('x', 0,  1), ('x', -1, -1)],
+            "X":  [('x', 1,  1), ('x', 0,  1), ('x', -1,  1)],
             "X'": [('x', 1, -1), ('x', 0, -1), ('x', -1, -1)],
-            "X'": [('x', 1,  2), ('x', 0,  2), ('x', -1,  2)],
+            "X2": [('x', 1,  2), ('x', 0,  2), ('x', -1,  2)],
             
             "Y": [('y', 1,  1), ('y', 0,  1), ('y', -1,  1)],
             "Y'": [('y', 1, -1), ('y', 0, -1), ('y', -1, -1)],
@@ -82,8 +149,7 @@ class Cube:
             "Z":  [('z', 1,  1), ('z', 0,  1), ('z', -1,  1)],
             "Z'": [('z', 1, -1), ('z', 0, -1), ('z', -1, -1)],
             "Z2": [('z', 1,  2), ('z', 0,  2), ('z', -1,  2)],
-            
-            
+              
         }
         
     def build_solved(self):
@@ -98,12 +164,14 @@ class Cube:
                     #construct faces from coords
                     #white on top, green left, red right
                     faces = {}
-                    if x == 1:  faces['x+'] = 'G'
-                    if x == -1: faces['x-'] = 'B'
-                    if y == 1:  faces['y+'] = 'W'
-                    if y == -1: faces['y-'] = 'Y'
-                    if z == 1:  faces['z+'] = 'R'
-                    if z == -1: faces['z-'] = 'O'
+                    if x == -1: faces['x-'] = 'O'  #left
+                    if x ==  1: faces['x+'] = 'R'  #right
+
+                    if y == -1: faces['y-'] = 'Y'  #down
+                    if y ==  1: faces['y+'] = 'W'  #up
+
+                    if z == -1: faces['z-'] = 'B'  #back
+                    if z ==  1: faces['z+'] = 'G'  #front
                     
                     self.cubies.append(Cubie(coords, faces))
                     
@@ -114,16 +182,99 @@ class Cube:
             if not self.MOVE_MAP[move]:
                 print(f"Unknown move {move}.")
                 continue 
-            self.rotate(self.MOVE_MAP[move])
+            self.rotate(move)
         print(f"sequence {sequence} parsed and applied!")
            
-    def rotate(axis, layer, direction):
-        """ works with the move_map to apply transformations to the cube
-        Args:
-            axis a char {x, y, z}: axis to rotate around
-            layer an int {-1, 0, 1}: layer to rotate
-            direction an int {1, -1, 2}: regular, prime, double move
+    def rotate(self, move_str):
+        #move is passed in as a string R, L', M2, etc.
+        #works with the move_map to apply transformations to the cube
+        operations = self.MOVE_MAP[move_str]
+        if not operations:
+            print(f"move {move_str} invalid or not in move map")
+            return
+
+        for operation in operations:
+            for cubie in self.cubies:
+                cubie.transform(operation)
+    
+    def dump_cubies(self):
+        print("=== CUBIE DUMP ===")
+        for cubie in sorted(self.cubies, key=lambda c: c.position):
+            print(cubie)
+        print("==================")
+    
+    def get_face_grid(self, face):
         """
-        
+        face: one of 'x+', 'x-', 'y+', 'y-', 'z+', 'z-'
+        returns: 3x3 list of colours
+        """
+
+        grid = [[None for _ in range(3)] for _ in range(3)]
+
+        for cubie in self.cubies:
+            if face not in cubie.faces:
+                continue
+
+            x, y, z = cubie.position
+            color = cubie.faces[face]
+
+            #map cubie position -> row/col depending on face
+            if face == 'y+':      #up: x (L→R), z (B→F)
+                row = 1 - z
+                col = x + 1
+            elif face == 'y-':    #down
+                row = z + 1
+                col = x + 1
+            elif face == 'z+':    #front
+                row = 1 - y
+                col = x + 1
+            elif face == 'z-':    #back (mirrored)
+                row = 1 - y
+                col = 1 - x
+            elif face == 'x+':    #right
+                row = 1 - y
+                col = 1 - z
+            elif face == 'x-':    #left
+                row = 1 - y
+                col = z + 1
+
+            grid[row][col] = color
+
+        return grid
+
+    def print_face(self, grid):
+        for row in grid:
+            print(" ".join(cell or "?" for cell in row))
+            
+    def print_net(self):
+        U = self.get_face_grid('y+')
+        D = self.get_face_grid('y-')
+        F = self.get_face_grid('z+')
+        B = self.get_face_grid('z-')
+        L = self.get_face_grid('x-')
+        R = self.get_face_grid('x+')
+
+        print("=== CUBE NET ===")
+
+        #up (indent it a little)
+        for r in range(3):
+            print("       " + " ".join(U[r]))
+
+        #Left, Front, Right, Back
+        for r in range(3):
+            print(
+                " ".join(L[r]) + "   " +
+                " ".join(F[r]) + "   " +
+                " ".join(R[r]) + "   " +
+                " ".join(B[r])
+            )
+
+        #down
+        for r in range(3):
+            print("       " + " ".join(D[r]))
+
+        print("================")
+
+
                     
                     
