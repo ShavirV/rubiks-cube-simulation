@@ -1,5 +1,7 @@
 #cube.py
 
+import random
+
 #implementing the basic representation of each cubie (piece) and the cube as a whole
 
 class Cubie:
@@ -148,8 +150,7 @@ class Cube:
             
             "Z":  [('z', 1,  1), ('z', 0,  1), ('z', -1,  1)],
             "Z'": [('z', 1, -1), ('z', 0, -1), ('z', -1, -1)],
-            "Z2": [('z', 1,  2), ('z', 0,  2), ('z', -1,  2)],
-              
+            "Z2": [('z', 1,  2), ('z', 0,  2), ('z', -1,  2)],      
         }
         
     def build_solved(self):
@@ -274,6 +275,30 @@ class Cube:
             print("       " + " ".join(D[r]))
 
         print("================")
+        
+    def random_scramble(self, length=10):
+        SCRAMBLE_MOVES = [
+            "R", "R'", "R2",
+            "L", "L'", "L2",
+            "U", "U'", "U2",
+            "D", "D'", "D2",
+            "F", "F'", "F2",
+            "B", "B'", "B2"
+        ]
+        scramble = ""
+        for _ in range(length):
+            move = random.choice(SCRAMBLE_MOVES)
+            self.rotate(move)
+            scramble += (move + " ")
+        print("Scramble: " + scramble)
+            
+        
+        
+        
+            
+        
+        
+        
 
 
                     
