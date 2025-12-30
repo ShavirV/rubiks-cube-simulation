@@ -276,7 +276,7 @@ class Cube:
 
         print("================")
         
-    def random_scramble(self, length=10):
+    def random_scramble(self, length=30):
         SCRAMBLE_MOVES = [
             "R", "R'", "R2",
             "L", "L'", "L2",

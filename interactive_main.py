@@ -32,12 +32,12 @@ def main():
             print("Quitter 🫵")
             break
         
-        cube.parse_sequence(cmd)
-        cube.print_net()
+        try:    
+            cube.parse_sequence(cmd)
+            cube.print_net()
+        except Exception as e:
+            print(f"invalid move or sequence caught! {e}")
         
-    
-    
-    
 
 if __name__ == "__main__":
     main()
