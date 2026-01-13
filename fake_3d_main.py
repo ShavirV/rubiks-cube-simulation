@@ -13,8 +13,8 @@ doom worked before true 3d rendering
 class CubeRenderer:
     def __init__(self, cube):
         self.cube = cube
-        self.angle_x = 30 * math.pi / 180  #start at 30 degrees for better view
-        self.angle_y = -45 * math.pi / 180  #start at -45 degrees
+        self.angle_x = -150 * math.pi / 180  #start at 30 degrees for better view
+        self.angle_y = 90 * math.pi / 180  #start at -45 degrees
         self.scale = 50
         self.dragging = False
         self.last_mouse_pos = (0, 0)
