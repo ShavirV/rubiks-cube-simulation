@@ -220,7 +220,7 @@ class Cube:
             color = cubie.faces[face]
 
             #map cubie position -> row/col depending on face
-            if face == 'y+':      #up: x (L→R), z (B→F)
+            if face == 'y+':      #up: x (L->R), z (B->F)
                 row = 1 - z
                 col = x + 1
             elif face == 'y-':    #down
