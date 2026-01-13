@@ -225,6 +225,39 @@ class CubeRenderer:
                     #draw inner border with border color
                     pygame.draw.polygon(screen, border_color, inset_points, 2)
 
+def build_move(event):
+    key_map = {
+        pygame.K_r: "R",
+        pygame.K_l: "L",
+        pygame.K_u: "U",
+        pygame.K_d: "D",
+        pygame.K_f: "F",
+        pygame.K_b: "B",
+        pygame.K_m: "M",
+        pygame.K_e: "E",
+        pygame.K_s: "S",
+        pygame.K_x: "X",
+        pygame.K_y: "Y",
+        pygame.K_z: "Z",
+    }
+    
+    if event.key not in key_map:
+        return None
+    
+    move = key_map[event.key]
+    
+    #allow for prime and double moves
+    mods = key_map[event.key]
+    
+    mods = pygame.key.get_mods()
+    
+    if mods & pygame.KMOD_SHIFT:
+        move += "'"
+    elif mods & pygame.KMOD_CTRL:
+        move += "2"
+        
+    return move
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
@@ -267,31 +300,17 @@ def main():
                     renderer.last_mouse_pos = current_pos
             elif event.type == pygame.KEYDOWN:
                 #keyboard controls for cube moves
-                if event.key == pygame.K_r:
-                    cube.rotate("R")
-                elif event.key == pygame.K_u:
-                    cube.rotate("U")
-                elif event.key == pygame.K_l:
-                    cube.rotate("L")
-                elif event.key == pygame.K_d:
-                    cube.rotate("D")
-                elif event.key == pygame.K_f:
-                    cube.rotate("F")
-                elif event.key == pygame.K_b:
-                    cube.rotate("B")
-                elif event.key == pygame.K_m:
-                    cube.rotate("M")
-                elif event.key == pygame.K_e:
-                    cube.rotate("E")
-                elif event.key == pygame.K_s:
-                    cube.rotate("S")
-                elif event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE:
                     #reset cube
                     cube = Cube()
                     renderer.cube = cube
                 elif event.key == pygame.K_q:
                     #random scramble
                     cube.random_scramble(20)
+                elif event.key:
+                    move = build_move(event)
+                    if move:
+                        cube.rotate(move)
         
         #clear screen with dark gray background
         screen.fill((30, 30, 40))
@@ -303,6 +322,8 @@ def main():
         instructions = [
             "Mouse: Drag to rotate view | Scroll to zoom",
             "Keys: R/U/L/D/F/B - Move faces | M/E/S - Slice moves",
+            "Hold Shift+Key for prime moves",
+            "Hold Ctrl+Key for double moves",
             "Space: Reset cube | Q: Random scramble"
         ]
         
