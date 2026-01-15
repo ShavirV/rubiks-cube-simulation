@@ -1,4 +1,4 @@
-# graphics_main.py
+#fake_3d_main.py
 import pygame
 import math
 from cube import Cube
@@ -38,25 +38,54 @@ class CubeRenderer:
         
         #return both 2D position and depth (z2)
         return (int(screen_x), int(screen_y)), z2
-    
-    def get_face_center_depth(self, position_3d, face_dir):
-        """Calculate the depth of a face center for sorting"""
+
+    def rotated_z(self, point_3d):
+        x, y, z = point_3d
+        
+        x1 = x * math.cos(self.angle_y) - z * math.sin(self.angle_y)
+        z1 = x * math.sin(self.angle_y) + z * math.cos(self.angle_y)
+        
+        y1 = y * math.cos(self.angle_x) - z1 * math.sin(self.angle_x)
+        z2 = y * math.sin(self.angle_x) + z1 * math.cos(self.angle_x)
+        
+        return z2
+
+    def get_face_points(self, position_3d, face_dir):
         x, y, z = position_3d
+        face_size = 0.5
         
         if face_dir == 'x+':
-            return (x + 0.5, y, z)  #right
+            return [(x+face_size,y-face_size,z-face_size),
+                    (x+face_size,y+face_size,z-face_size),
+                    (x+face_size,y+face_size,z+face_size),
+                    (x+face_size,y-face_size,z+face_size)]
         elif face_dir == 'x-':
-            return (x - 0.5, y, z)  #left
+            return [(x-face_size,y-face_size,z-face_size),
+                    (x-face_size,y+face_size,z-face_size),
+                    (x-face_size,y+face_size,z+face_size),
+                    (x-face_size,y-face_size,z+face_size)]
         elif face_dir == 'y+':
-            return (x, y + 0.5, z)  #up
+            return [(x-face_size,y+face_size,z-face_size),
+                    (x+face_size,y+face_size,z-face_size),
+                    (x+face_size,y+face_size,z+face_size),
+                    (x-face_size,y+face_size,z+face_size)]
         elif face_dir == 'y-':
-            return (x, y - 0.5, z)  #down
+            return [(x-face_size,y-face_size,z-face_size),
+                    (x+face_size,y-face_size,z-face_size),
+                    (x+face_size,y-face_size,z+face_size),
+                    (x-face_size,y-face_size,z+face_size)]
         elif face_dir == 'z+':
-            return (x, y, z + 0.5)  #front
+            return [(x-face_size,y-face_size,z+face_size),
+                    (x+face_size,y-face_size,z+face_size),
+                    (x+face_size,y+face_size,z+face_size),
+                    (x-face_size,y+face_size,z+face_size)]
         elif face_dir == 'z-':
-            return (x, y, z - 0.5)  #Back
-        return (x, y, z)
-    
+            return [(x-face_size,y-face_size,z-face_size),
+                    (x+face_size,y-face_size,z-face_size),
+                    (x+face_size,y+face_size,z-face_size),
+                    (x-face_size,y+face_size,z-face_size)]
+        return []
+
     def draw_cube(self, screen):
         """Draw the cube with depth sorting"""
         #collect all faces with their depth for sorting
@@ -65,11 +94,8 @@ class CubeRenderer:
         for cubie in self.cube.cubies:
             x, y, z = cubie.position
             for face_dir, color in cubie.faces.items():
-                #calculate face center in 3D for depth sorting
-                face_center = self.get_face_center_depth((x, y, z), face_dir)
-                
-                #project to get depth
-                _, depth = self.project_3d_to_2d(face_center)
+                points_3d = self.get_face_points((x, y, z), face_dir)
+                depth = sum(self.rotated_z(p) for p in points_3d) / 4
                 
                 faces_to_draw.append({
                     'cubie_pos': (x, y, z),
@@ -92,137 +118,65 @@ class CubeRenderer:
         """Draw a single face of a cubie with borders and shading"""
         #map colors to pygame colors with slight variations for shading
         base_color_map = {
-            'R': (255, 50, 50),     # Bright Red
-            'O': (255, 165, 0),     # Orange
-            'B': (50, 50, 255),     # Bright Blue
-            'G': (50, 255, 50),     # Bright Green
-            'W': (255, 255, 255),   # White
-            'Y': (255, 255, 100)    # Bright Yellow
+            'R': (255, 50, 50),
+            'O': (255, 165, 0),
+            'B': (50, 50, 255),
+            'G': (50, 255, 50),
+            'W': (255, 255, 255),
+            'Y': (255, 255, 100)
         }
         
-        #darker shade for borders
         border_color_map = {
-            'R': (200, 30, 30),     # Darker Red
-            'O': (220, 140, 0),     # Darker Orange
-            'B': (30, 30, 200),     # Darker Blue
-            'G': (30, 200, 30),     # Darker Green
-            'W': (220, 220, 220),   # Light Gray
-            'Y': (220, 220, 80)     # Darker Yellow
+            'R': (200, 30, 30),
+            'O': (220, 140, 0),
+            'B': (30, 30, 200),
+            'G': (30, 200, 30),
+            'W': (220, 220, 220),
+            'Y': (220, 220, 80)
         }
         
         base_color = base_color_map.get(color, (128, 128, 128))
         border_color = border_color_map.get(color, (100, 100, 100))
         
-        x, y, z = position_3d
-        
-        #calculate face corners for a 'solid' object
-        face_size = 0.5  
-        points_3d = []
-        
-        if face_dir == 'x+':
-            #right face
-            x_offset = 0.5
-            points_3d = [
-                (x + x_offset, y - face_size, z - face_size),
-                (x + x_offset, y + face_size, z - face_size),
-                (x + x_offset, y + face_size, z + face_size),
-                (x + x_offset, y - face_size, z + face_size)
-            ]
-        elif face_dir == 'x-':
-            #left face
-            x_offset = -0.5
-            points_3d = [
-                (x + x_offset, y - face_size, z - face_size),
-                (x + x_offset, y + face_size, z - face_size),
-                (x + x_offset, y + face_size, z + face_size),
-                (x + x_offset, y - face_size, z + face_size)
-            ]
-        elif face_dir == 'y+':
-            #up face
-            y_offset = 0.5
-            points_3d = [
-                (x - face_size, y + y_offset, z - face_size),
-                (x + face_size, y + y_offset, z - face_size),
-                (x + face_size, y + y_offset, z + face_size),
-                (x - face_size, y + y_offset, z + face_size)
-            ]
-        elif face_dir == 'y-':
-            #down face
-            y_offset = -0.5
-            points_3d = [
-                (x - face_size, y + y_offset, z - face_size),
-                (x + face_size, y + y_offset, z - face_size),
-                (x + face_size, y + y_offset, z + face_size),
-                (x - face_size, y + y_offset, z + face_size)
-            ]
-        elif face_dir == 'z+':
-            #front face
-            z_offset = 0.5
-            points_3d = [
-                (x - face_size, y - face_size, z + z_offset),
-                (x + face_size, y - face_size, z + z_offset),
-                (x + face_size, y + face_size, z + z_offset),
-                (x - face_size, y + face_size, z + z_offset)
-            ]
-        elif face_dir == 'z-':
-            #back face
-            z_offset = -0.5
-            points_3d = [
-                (x - face_size, y - face_size, z + z_offset),
-                (x + face_size, y - face_size, z + z_offset),
-                (x + face_size, y + face_size, z + z_offset),
-                (x - face_size, y + face_size, z + z_offset)
-            ]
+        points_3d = self.get_face_points(position_3d, face_dir)
         
         if points_3d:
-            #project all points to 2D
             projected_points = []
             for point in points_3d:
                 (screen_x, screen_y), _ = self.project_3d_to_2d(point)
                 projected_points.append((screen_x, screen_y))
             
-            #draw the face fill
             pygame.draw.polygon(screen, base_color, projected_points)
-            
-            #draw a thicker border to separate pieces
             pygame.draw.polygon(screen, (0, 0, 0), projected_points, 10)
             
-            #draw inner border for 3D effect
             if len(projected_points) == 4:
-                #calculate inset points for inner border
                 inset_points = []
                 for i in range(4):
                     x1, y1 = projected_points[i]
                     x2, y2 = projected_points[(i + 1) % 4]
                     x3, y3 = projected_points[(i + 2) % 4]
                     
-                    #calculate direction vectors
                     dx1 = x2 - x1
                     dy1 = y2 - y1
                     dx2 = x3 - x2
                     dy2 = y3 - y2
                     
-                    #normalize and perpendicular vectors
                     length1 = math.sqrt(dx1*dx1 + dy1*dy1)
                     length2 = math.sqrt(dx2*dx2 + dy2*dy2)
                     
                     if length1 > 0 and length2 > 0:
-                        #perpendicular vectors pointing inward
                         perp1 = (-dy1/length1, dx1/length1)
                         perp2 = (-dy2/length2, dx2/length2)
                         
-                        #average for corner direction
                         avg_perp = ((perp1[0] + perp2[0])/2, (perp1[1] + perp2[1])/2)
                         avg_len = math.sqrt(avg_perp[0]*avg_perp[0] + avg_perp[1]*avg_perp[1])
                         
                         if avg_len > 0:
-                            #move point inward
                             inset_x = x2 + avg_perp[0]/avg_len * 2
                             inset_y = y2 + avg_perp[1]/avg_len * 2
                             inset_points.append((inset_x, inset_y))
                 
                 if len(inset_points) == 4:
-                    #draw inner border with border color
                     pygame.draw.polygon(screen, border_color, inset_points, 2)
 
 def build_move(event):
@@ -245,10 +199,6 @@ def build_move(event):
         return None
     
     move = key_map[event.key]
-    
-    #allow for prime and double moves
-    mods = key_map[event.key]
-    
     mods = pygame.key.get_mods()
     
     if mods & pygame.KMOD_SHIFT:
@@ -267,22 +217,20 @@ def main():
     cube = Cube()
     renderer = CubeRenderer(cube)
     
-    #font for instructions
     font = pygame.font.SysFont('Arial', 17)
     
-    #main game loop
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  #left mouse button
+                if event.button == 1:
                     renderer.dragging = True
                     renderer.last_mouse_pos = pygame.mouse.get_pos()
-                elif event.button == 4:  #mouse wheel up
+                elif event.button == 4:
                     renderer.scale = min(renderer.scale + 5, 100)
-                elif event.button == 5:  #mouse wheel down
+                elif event.button == 5:
                     renderer.scale = max(renderer.scale - 5, 20)
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
@@ -293,32 +241,24 @@ def main():
                     dx = current_pos[0] - renderer.last_mouse_pos[0]
                     dy = current_pos[1] - renderer.last_mouse_pos[1]
                     
-                    #update rotation angles based on mouse movement
                     renderer.angle_y += dx * 0.01
                     renderer.angle_x += dy * 0.01
                     
                     renderer.last_mouse_pos = current_pos
             elif event.type == pygame.KEYDOWN:
-                #keyboard controls for cube moves
                 if event.key == pygame.K_SPACE:
-                    #reset cube
                     cube = Cube()
                     renderer.cube = cube
                 elif event.key == pygame.K_q:
-                    #random scramble
                     cube.random_scramble(20)
-                elif event.key:
+                else:
                     move = build_move(event)
                     if move:
                         cube.rotate(move)
         
-        #clear screen with dark gray background
         screen.fill((30, 30, 40))
-        
-        #draw cube
         renderer.draw_cube(screen)
         
-        #draw instructions
         instructions = [
             "Mouse: Drag to rotate view | Scroll to zoom",
             "Keys: R/U/L/D/F/B - Move faces | M/E/S - Slice moves",
@@ -331,7 +271,6 @@ def main():
             text_surface = font.render(text, True, (200, 200, 200))
             screen.blit(text_surface, (10, 10 + i * 25))
         
-        #draw current rotation info
         angle_text = f"Rotation: X={renderer.angle_x*180/math.pi:.1f}°, Y={renderer.angle_y*180/math.pi:.1f}°"
         angle_surface = font.render(angle_text, True, (200, 200, 200))
         screen.blit(angle_surface, (10, 570))
