@@ -15,6 +15,20 @@ class Cubie:
         
         self.position = position
         self.faces = faces
+        self.center_label = None
+        
+        #add annotations for center pieces (for solving and gui clarity)
+        if len(self.faces) == 1:
+            face_dir = next(iter(self.faces.keys()))
+            label_map = {
+                'z+': 'F',
+                'z-': 'B',
+                'y+': 'U',
+                'y-': 'D',
+                'x-': 'L',
+                'x+': 'R'
+            }
+            self.center_label = label_map.get(face_dir)
         
         self.FACE_ROTATIONS = {
             'x': {
@@ -34,6 +48,19 @@ class Cubie:
                 'y-': 'x-',
                 'x-': 'y+',
                 'y+': 'x+'
+            }
+        }
+        
+        #to reassign face annotations when rotating the entire cube
+        self.LABEL_ROTATIONS = {
+            'x': {
+                'U': 'B', 'B': 'D', 'D': 'F', 'F': 'U'
+            },
+            'y': {
+                'F': 'R', 'R': 'B', 'B': 'L', 'L': 'F'
+            },
+            'z': {
+                'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'
             }
         }
 
@@ -61,6 +88,15 @@ class Cubie:
             for face, color in self.faces.items():
                 new_faces[face_map.get(face, face)] = color
             self.faces = new_faces
+            
+            #rotate center label if it has one
+            if self.center_label:
+                rot = self.LABEL_ROTATIONS.get(axis, {})
+                if direction > 0:
+                    self.center_label = rot.get(self.center_label, self.center_label)
+                else: #prime rotation
+                    inv = {v: k for k, v in rot.items()}
+                    self.center_label = inv.get(self.center_label, self.center_label)
         
     #apply a vector transformation according to the axis we rotate around
     def rotate_pos(self, pos, axis):

@@ -13,11 +13,22 @@ doom worked before true 3d rendering
 class CubeRenderer:
     def __init__(self, cube):
         self.cube = cube
-        self.angle_x = -150 * math.pi / 180  #start at 30 degrees for better view
-        self.angle_y = 90 * math.pi / 180  #start at -45 degrees
+        self.angle_x = -150 * math.pi / 180  
+        self.angle_y = 90 * math.pi / 180  
         self.scale = 50
         self.dragging = False
         self.last_mouse_pos = (0, 0)
+        self.label_font = pygame.font.SysFont("Arial", 22, bold=True)
+        
+        #face direction label mapping
+        self.face_labels = {
+            'x+': 'R',
+            'x-': 'L',
+            'y+': 'U',
+            'y-': 'D',
+            'z+': 'F',
+            'z-': 'B'
+        }
     
     def project_3d_to_2d(self, point_3d):
         """Simple 3D to 2D projection with rotation"""
@@ -178,6 +189,17 @@ class CubeRenderer:
                 
                 if len(inset_points) == 4:
                     pygame.draw.polygon(screen, border_color, inset_points, 2)
+                
+                x, y, z = position_3d
+                is_center = sum(abs(v) for v in (x, y, z)) == 1
+
+                if is_center and face_dir in self.face_labels:
+                    cx = sum(p[0] for p in projected_points) / 4
+                    cy = sum(p[1] for p in projected_points) / 4
+                    label = self.face_labels[face_dir]
+                    text = self.label_font.render(label, True, (0, 0, 0))
+                    rect = text.get_rect(center=(cx, cy))
+                    screen.blit(text, rect)
 
 def build_move(event):
     key_map = {
