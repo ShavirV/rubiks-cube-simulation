@@ -232,14 +232,14 @@ def build_move(event):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((800, 600))
+    screen = pygame.display.set_mode((900, 800))
     pygame.display.set_caption("3D Rubik's Cube - Drag to Rotate View")
     clock = pygame.time.Clock()
     
     cube = Cube()
     renderer = CubeRenderer(cube)
     
-    font = pygame.font.SysFont('Arial', 17)
+    font = pygame.font.SysFont('Arial', 12)
     
     running = True
     while running:
